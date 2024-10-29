@@ -102,6 +102,96 @@ class SudokuController extends Controller
             return response()->json(['error' => 'Failed to verify game'], 500);
         }
     }
+
+    public function makeMove(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'row' => 'required|integer|between:0,8',
+                'col' => 'required|integer|between:0,8',
+                'value' => 'nullable|integer|between:0,9',
+            ]);
+    
+            $game = SudokuGame::findOrFail($id);
+            
+            if ($game->status !== 'in-progress') {
+                return response()->json(['error' => 'Game is not in progress'], 400);
+            }
+    
+            $board = json_decode($game->board, true);
+            $solution = json_decode($game->solution, true);
+            
+            $row = $validated['row'];
+            $col = $validated['col'];
+            $value = $validated['value'];
+    
+            // Handle move validation and application
+            $result = $this->processMoveAttempt($game, $board, $solution, $row, $col, $value);
+            if (isset($result['error'])) {
+                return response()->json($result, 400);
+            }
+    
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error('Error making move: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to process move'], 500);
+        }
+    }
+
+    private function processMoveAttempt($game, $board, $solution, $row, $col, $value)
+    {
+        // Handle deletion
+        if ($value === null || $value === 0) {
+            return $this->handleDeletion($game, $board, $row, $col);
+        }
+        
+        // Validate move
+        if ($board[$row][$col] !== 0) {
+            return ['error' => 'Cell is not empty'];
+        }
+        
+        if (!$this->isValidMove($board, $row, $col, $value)) {
+            return ['error' => 'Move violates Sudoku rules'];
+        }
+        
+        if ((int)$solution[$row][$col] !== (int)$value) {
+            return ['error' => 'Value does not match solution'];
+        }
+        
+        return $this->applyMove($game, $board, $row, $col, $value);
+    }
+    private function handleDeletion($game, $board, $row, $col)
+    {
+        $board[$row][$col] = 0;
+        $game->board = json_encode($board);
+        $game->save();
+        
+        DB::table('game_progress')->updateOrInsert(
+            ['game_id' => $game->id, 'cell_position' => "$row,$col"],
+            ['value' => 0, 'is_correct' => true]
+        );
+        
+        return ['message' => 'Cell cleared', 'game' => $game];
+    }
+    private function applyMove($game, $board, $row, $col, $value)
+    {
+        $board[$row][$col] = $value;
+        $game->board = json_encode($board);
+        
+        DB::table('game_progress')->updateOrInsert(
+            ['game_id' => $game->id, 'cell_position' => "$row,$col"],
+            ['value' => $value, 'is_correct' => true]
+        );
+        
+        if ($this->isBoardComplete($board)) {
+            $game->status = 'completed';
+            $game->save();
+            return ['message' => 'Move is valid. Game completed!', 'game' => $game];
+        }
+        
+        $game->save();
+        return ['message' => 'Move is valid', 'game' => $game];
+    }
     
     private function generateBoard(): array
     {
