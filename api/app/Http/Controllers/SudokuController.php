@@ -66,6 +66,22 @@ class SudokuController extends Controller
             return response()->json(['error' => 'Failed to retrieve game'], 500);
         }
     }
+    public function getUserGames($id)
+    {
+        try {
+            $games = SudokuGame::where('user_id', $id)
+                ->get()
+                ->groupBy('status');
+            
+            return response()->json([
+                'unfinished_games' => $games['in-progress'] ?? [],
+                'finished_games' => $games['completed'] ?? []
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving user games: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to retrieve games'], 500);
+        }
+    }
 
     public function verifyGame($id)
     {
