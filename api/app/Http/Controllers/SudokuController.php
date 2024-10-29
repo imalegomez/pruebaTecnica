@@ -66,6 +66,42 @@ class SudokuController extends Controller
             return response()->json(['error' => 'Failed to retrieve game'], 500);
         }
     }
+
+    public function verifyGame($id)
+    {
+        try {
+            $game = SudokuGame::findOrFail($id);
+            Log::info("Verifying game status. Game ID: {$id}");
+            
+            $board = json_decode($game->board, true);
+            
+            if (!$this->isBoardComplete($board)) {
+                return response()->json([
+                    'status' => 'in-progress',
+                    'game' => $game
+                ]);
+            }
+            
+            if ($this->verifySolution($board)) {
+                $game->status = 'completed';
+                $game->save();
+                return response()->json([
+                    'status' => 'completed',
+                    'game' => $game,
+                    'message' => 'Game completed successfully!'
+                ]);
+            }
+            
+            return response()->json([
+                'status' => 'in-progress',
+                'game' => $game,
+                'error' => 'Solution is not valid'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error verifying game: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to verify game'], 500);
+        }
+    }
     
     private function generateBoard(): array
     {
