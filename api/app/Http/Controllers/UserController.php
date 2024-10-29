@@ -39,7 +39,7 @@ class UserController extends Controller
             return response()->json(['error' => 'Failed to create user: ' . $e->getMessage()], 500);
         }
     }
-    
+
     public function getUser($id)
     {
         $user = User::find($id);
@@ -87,5 +87,5 @@ class UserController extends Controller
             // Manejo de errores generales
             return response()->json(['error' => 'Failed to login: ' . $e->getMessage()], 500);
         }
-    }  
+    }
 }

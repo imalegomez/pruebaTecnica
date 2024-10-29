@@ -1,23 +1,39 @@
-FROM node:18 AS build
-WORKDIR /usr/src/app
+# Use PHP-FPM 8.2 as base image
+FROM php:8.2-fpm
 
-COPY .env* ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-RUN npm install
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
+# Get latest Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy Laravel files
 COPY . .
 
-RUN npm run build
+# Install dependencies
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-FROM nginx:stable-alpine
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN rm /etc/nginx/conf.d/default.conf
+# Expose port 8000
+EXPOSE 8000 
 
-COPY --from=build /usr/src/app/dist /usr/share/nginx/html
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 3000
-
-CMD ["nginx", "-g", "daemon off;"]
+# Start Laravel development server
+CMD php artisan migrate && php artisan serve --host=0.0.0.0 --port=8000
