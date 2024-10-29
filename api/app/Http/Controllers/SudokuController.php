@@ -38,6 +38,34 @@ class SudokuController extends Controller
             return response()->json(['error' => 'Failed to create game'], 500);
         }
     }
+
+    public function getGame($id)
+    {
+        try {
+            $game = SudokuGame::findOrFail($id);
+            $board = json_decode($game->board, true);
+            
+            // Load and apply progress
+            $progress = DB::table('game_progress')
+                         ->where('game_id', $id)
+                         ->get();
+    
+            foreach ($progress as $move) {
+                [$row, $col] = explode(',', $move->cell_position);
+                $board[$row][$col] = $move->value;
+            }
+    
+            return response()->json([
+                'game' => $game,
+                'board' => $board
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Game not found'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving game: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to retrieve game'], 500);
+        }
+    }
     
     private function generateBoard(): array
     {
@@ -173,6 +201,18 @@ class SudokuController extends Controller
             }
         }
 
+        return true;
+    }
+
+    private function isBoardComplete($board): bool
+    {
+        for ($row = 0; $row < self::BOARD_SIZE; $row++) {
+            for ($col = 0; $col < self::BOARD_SIZE; $col++) {
+                if ($board[$row][$col] === 0) {
+                    return false;
+                }
+            }
+        }
         return true;
     }
 
