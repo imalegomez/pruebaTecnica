@@ -78,5 +78,22 @@ class SudokuController extends Controller
 
         return true;
     }
-    
+
+    private function fillBoard(&$board): void
+    {
+        $this->solveSudoku($board, true);
+    }
+
+    private function removeNumbers(&$board): void
+    {
+        $cellsToRemove = self::CELLS_TO_REMOVE;
+        while ($cellsToRemove > 0) {
+            $row = rand(0, self::BOARD_SIZE - 1);
+            $col = rand(0, self::BOARD_SIZE - 1);
+            if ($board[$row][$col] != 0) {
+                $board[$row][$col] = 0;
+                $cellsToRemove--;
+            }
+        }
+    }
 }
