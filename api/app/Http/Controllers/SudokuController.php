@@ -14,6 +14,30 @@ class SudokuController extends Controller
     private const BOARD_SIZE = 9;
     private const SUB_GRID_SIZE = 3;
     private const CELLS_TO_REMOVE = 40;
+
+    public function createGame(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'user_id' => 'required|exists:users,id'
+            ]);
+
+            $board = $this->generateBoard();
+            $solution = $this->generateSolution($board);
+    
+            $game = SudokuGame::create([
+                'user_id' => $validated['user_id'],
+                'board' => json_encode($board),
+                'solution' => json_encode($solution),
+                'status' => 'in-progress',
+            ]);
+    
+            return response()->json(['game' => $game], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating game: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create game'], 500);
+        }
+    }
     
     private function generateBoard(): array
     {
