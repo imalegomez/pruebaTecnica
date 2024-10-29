@@ -26,15 +26,20 @@ Asegúrate de tener instalados los siguientes componentes:
 1. **Clonar el Repositorio**
 
    ```bash
-   git clone https://github.com/usuario/sudoku-master.git
-   cd sudoku-master
+   git clone https://github.com/imalegomez/pruebaTecnica.git
+   cd pruebaTecnica
 
-2. **Iniciar Docker-Compose**
+2. **Cambiar de rama a dev**
+
+   ```bash
+   git checkout dev
+
+3. **Iniciar Docker-Compose**
 
     ```bash
     docker-compose up --build
 
-3. **Acceder al juego**
+4. **Acceder al juego**
   Abre tu navegador y ve a http://localhost:3000 para acceder a Sudoku Master.
 
 ## Uso
